@@ -80,7 +80,9 @@ jobs:
 
             # Install pnpm if not installed
             if ! command -v pnpm &> /dev/null; then
-              npm install -g pnpm
+              curl -fsSL https://get.pnpm.io/install.sh | sh -
+              export PNPM_HOME="$HOME/.local/share/pnpm"
+              export PATH="$PNPM_HOME:$PATH"
             fi
 
             # Backup
