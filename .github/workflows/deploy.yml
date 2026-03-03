@@ -16,7 +16,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        # No version here — reads pnpm@10.28.0 from package.json "packageManager"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,16 +26,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build TypeScript
-        run: pnpm run build
-
       - name: Create deployment package
         run: |
-          mkdir -p deploy
-          cp -r dist deploy/
-          cp package.json pnpm-lock.yaml deploy/
-          cp ecosystem.config.cjs deploy/
-          tar -czf deploy.tar.gz -C deploy .
+          tar -czf deploy.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='backups' \
+            .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -87,12 +84,13 @@ jobs:
             fi
 
             # Backup
-            if [ -d "dist" ]; then
-              timestamp=$(date +%Y%m%d_%H%M%S)
-              mkdir -p backups
-              tar -czf backups/backup_${timestamp}.tar.gz dist package.json ecosystem.config.cjs .env 2>/dev/null || true
-              ls -t backups/backup_*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm
-            fi
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            mkdir -p backups
+            tar -czf backups/backup_${timestamp}.tar.gz \
+              --exclude='node_modules' \
+              --exclude='backups' \
+              . 2>/dev/null || true
+            ls -t backups/backup_*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm
 
             # Extract new build
             tar --overwrite -xzf /tmp/deploy.tar.gz -C .
