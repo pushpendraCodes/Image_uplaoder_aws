@@ -78,11 +78,11 @@ jobs:
               exit 1
             fi
 
-            # Install pnpm if not installed
+            # Ensure pnpm is available
+            export PNPM_HOME="$HOME/.local/share/pnpm"
+            export PATH="$PNPM_HOME:$PATH"
             if ! command -v pnpm &> /dev/null; then
               curl -fsSL https://get.pnpm.io/install.sh | sh -
-              export PNPM_HOME="$HOME/.local/share/pnpm"
-              export PATH="$PNPM_HOME:$PATH"
             fi
 
             # Backup
