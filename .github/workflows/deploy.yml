@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-   build:
+  build:
     name: Build Application
     runs-on: ubuntu-latest
 
@@ -14,24 +14,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install pnpm
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 8
-          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.13.1"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build TypeScript
         run: pnpm run build
-        
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+          cp -r dist deploy/
+          cp package.json pnpm-lock.yaml deploy/
+          cp ecosystem.config.cjs deploy/
+          tar -czf deploy.tar.gz -C deploy .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deploy.tar.gz
+          retention-days: 1
+
   deploy:
     name: Deploy to EC2
     needs: build
@@ -58,7 +72,15 @@ jobs:
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
             ${EC2_USERNAME}@${EC2_HOST} << 'EOF'
 
+            set -e
+
             cd /var/www/express-app/Image_uplaoder_aws
+
+            # Check .env exists before doing anything
+            if [ ! -f ".env" ]; then
+              echo "ERROR: .env file is missing — aborting deploy."
+              exit 1
+            fi
 
             # Install pnpm if not installed
             if ! command -v pnpm &> /dev/null; then
@@ -78,7 +100,7 @@ jobs:
             rm /tmp/deploy.tar.gz
 
             # Install production dependencies
-            pnpm install --prod --frozen-lockfile
+            NODE_ENV=production pnpm install --frozen-lockfile
 
             mkdir -p logs
 
@@ -92,4 +114,6 @@ jobs:
             pm2 save
           EOF
 
-          rm private_key.pem
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f private_key.pem
