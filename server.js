@@ -185,6 +185,10 @@ app.delete("/api/images/:id", async (req, res) => {
   }
 });
 
+app.get("/" ,(req,res)=>{
+  res.send("working")
+})
+
 // ─── SERVER START ────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 
