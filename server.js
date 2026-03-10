@@ -186,7 +186,7 @@ app.delete("/api/images/:id", async (req, res) => {
 });
 
 app.get("/" ,(req,res)=>{
-  res.send("working")
+  res.send("I am working")
 })
 
 // ─── SERVER START ────────────────────────────────────────────
